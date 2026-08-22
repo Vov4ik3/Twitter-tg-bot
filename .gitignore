@@ -1,0 +1,10 @@
+# secrets — never commit these
+.env
+
+# virtual environment — recreate per-machine, don't version it
+venv/
+
+# runtime artifacts
+bot.log
+__pycache__/
+*.pyc
