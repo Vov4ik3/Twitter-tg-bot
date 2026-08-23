@@ -8,3 +8,5 @@ venv/
 bot.log
 __pycache__/
 *.pyc
+
+panel_run.log
