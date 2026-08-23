@@ -41,14 +41,14 @@ def is_supported_url(url: str) -> bool:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Send me a twitter/x link and I'll drop the video into the group."
+        "Haiiii :3 \nSend me a twitter/x link and I'll drop the video into the group."
     )
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if ALLOWED_USER_IDS and user_id not in ALLOWED_USER_IDS:
-        logger.info("Ignoring message from unauthorized user %s", user_id)
+        logger.info("You are not my wolf-mom, %s", user_id)
         return
 
     text = update.message.text or ""

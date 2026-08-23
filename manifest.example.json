@@ -1,0 +1,6 @@
+{
+  "name": "Twitter to Telegram Bot",
+  "entrypoint": "bot.py",
+  "venv": "venv",
+  "description": "Downloads twitter video/gif links and posts them to a telegram channel."
+}
