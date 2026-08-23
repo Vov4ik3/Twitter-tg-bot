@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo ===================================
 echo  Twitter -^> Telegram bot: first-time setup
@@ -34,8 +34,8 @@ if not exist .env (
     copy .env.example .env >nul
     echo.
     echo   Opening it in Notepad. Fill in BOT_TOKEN, TARGET_CHAT_ID,
-    echo   and ALLOWED_USER_IDS, save, close it, then run setup.bat
-    echo   again to finish.
+    echo   and ALLOWED_USER_IDS, save, close it, then run this
+    echo   script again to actually start the bot.
     echo.
     notepad .env
     pause
