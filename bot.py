@@ -24,14 +24,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 WRITE_TIMEOUT = 60
+READ_TIMEOUT = 60
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 TARGET_CHAT_ID = int(os.environ["TARGET_CHAT_ID"])
 ALLOWED_USER_IDS = {
     int(x) for x in os.environ.get("ALLOWED_USER_IDS", "").split(",") if x.strip()
 }
 MAX_UPLOAD_MB = 49  # Telegram Bot API hard limit is 50MB
-COOKIES_FROM_BROWSER = os.environ.get("COOKIES_FROM_BROWSER", "").strip()
-COOKIES_FILE = os.environ.get("COOKIES_FILE", "").strip()
 
 URL_RE = re.compile(r"https?://\S+")
 SUPPORTED_DOMAINS = ("twitter.com", "x.com", "t.co")
@@ -93,10 +92,6 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
             "quiet": True,
             "no_warnings": True,
         }
-        if COOKIES_FROM_BROWSER:
-            ydl_opts["cookiesfrombrowser"] = (COOKIES_FROM_BROWSER,)
-        elif COOKIES_FILE:
-            ydl_opts["cookiefile"] = COOKIES_FILE
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -145,7 +140,7 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
 
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).write_timeout(WRITE_TIMEOUT).build()
+    app = Application.builder().token(BOT_TOKEN).read_timeout(READ_TIMEOUT).write_timeout(WRITE_TIMEOUT).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     logger.info("Bot starting (polling)...")
