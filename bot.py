@@ -15,6 +15,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+from yt_dlp.networking.impersonate import ImpersonateTarget
 
 load_dotenv()
 
@@ -31,9 +32,11 @@ ALLOWED_USER_IDS = {
     int(x) for x in os.environ.get("ALLOWED_USER_IDS", "").split(",") if x.strip()
 }
 MAX_UPLOAD_MB = 49  # Telegram Bot API hard limit is 50MB
+COOKIES_FROM_BROWSER = os.environ.get("COOKIES_FROM_BROWSER", "").strip()
+COOKIES_FILE = os.environ.get("COOKIES_FILE", "").strip()
 
 URL_RE = re.compile(r"https?://\S+")
-SUPPORTED_DOMAINS = ("twitter.com", "x.com", "t.co")
+SUPPORTED_DOMAINS = ("twitter.com", "x.com", "t.co", "instagram.com")
 
 
 def is_supported_url(url: str) -> bool:
@@ -58,8 +61,8 @@ def has_audio(info: dict) -> bool:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Send me a twitter/x link and I'll drop the video into the group."
-    )
+        "Send me a twitter/x or instagram link and I'll drop the video into the group."
+    )   
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -91,7 +94,16 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
             "merge_output_format": "mp4",
             "quiet": True,
             "no_warnings": True,
+            # Instagram now fingerprints the TLS/HTTP handshake itself to
+            # detect non-browser clients - this makes yt-dlp's requests look
+            # like a real browser's. Harmless for sites that don't need it
+            # (Twitter keeps working the same as before).
+            "impersonate": ImpersonateTarget(),
         }
+        if COOKIES_FROM_BROWSER:
+            ydl_opts["cookiesfrombrowser"] = (COOKIES_FROM_BROWSER,)
+        elif COOKIES_FILE:
+            ydl_opts["cookiefile"] = COOKIES_FILE
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -140,7 +152,13 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
 
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).read_timeout(READ_TIMEOUT).write_timeout(WRITE_TIMEOUT).build()
+    app = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .write_timeout(WRITE_TIMEOUT)
+        .read_timeout(READ_TIMEOUT)
+        .build()
+    )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     logger.info("Bot starting (polling)...")
