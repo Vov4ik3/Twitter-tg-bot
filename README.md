@@ -1,7 +1,13 @@
 # Twitter/X → Telegram group bot
 
-DM it a twitter.com/x.com link, it downloads the video (yt-dlp handles this
-natively — no ssstwitter needed) and posts it straight into your group.
+DM it a Twitter/X, Instagram, YouTube or Reddit link, it downloads the video
+(yt-dlp handles this natively — no ssstwitter needed) and posts it straight
+into your group. Leave `TARGET_CHAT_ID` empty and it sends the video back to
+whoever sent the link instead.
+
+YouTube needs a JavaScript runtime on the machine: install
+[Deno](https://deno.com) or Node.js. Instagram usually needs cookies — see
+`COOKIES_FILE` in `.env.example`.
 
 ## 1. Get a bot token
 

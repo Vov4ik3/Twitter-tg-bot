@@ -24,10 +24,15 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+# httpx logs every request URL, and those contain the bot token
+logging.getLogger("httpx").setLevel(logging.WARNING)
 WRITE_TIMEOUT = 60
 READ_TIMEOUT = 60
 BOT_TOKEN = os.environ["BOT_TOKEN"]
-TARGET_CHAT_ID = int(os.environ["TARGET_CHAT_ID"])
+# Set it to post everything into one group/channel; leave it empty to send
+# the video back to whoever sent the link (DM mode).
+_target = os.environ.get("TARGET_CHAT_ID", "").strip()
+TARGET_CHAT_ID = int(_target) if _target else None
 ALLOWED_USER_IDS = {
     int(x) for x in os.environ.get("ALLOWED_USER_IDS", "").split(",") if x.strip()
 }
@@ -36,7 +41,12 @@ COOKIES_FROM_BROWSER = os.environ.get("COOKIES_FROM_BROWSER", "").strip()
 COOKIES_FILE = os.environ.get("COOKIES_FILE", "").strip()
 
 URL_RE = re.compile(r"https?://\S+")
-SUPPORTED_DOMAINS = ("twitter.com", "x.com", "t.co", "instagram.com")
+SUPPORTED_DOMAINS = (
+    "twitter.com", "x.com", "t.co",
+    "instagram.com",
+    "youtube.com", "youtu.be",
+    "reddit.com", "redd.it",
+)
 
 
 def is_supported_url(url: str) -> bool:
@@ -61,8 +71,9 @@ def has_audio(info: dict) -> bool:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Send me a twitter/x or instagram link and I'll drop the video into the group."
-    )   
+        "Send me a twitter/x, instagram, youtube, or reddit link and I'll "
+        + ("drop the video into the group." if TARGET_CHAT_ID else "send the video right back here.")
+    )
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -91,7 +102,12 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
         ydl_opts = {
             "outtmpl": outtmpl,
             "format": "bv*+ba/b",
+            # Prefer <=720p H.264/AAC: plays everywhere in Telegram and keeps
+            # YouTube videos under the 50MB bot upload limit.
+            "format_sort": ["res:720", "vcodec:h264", "acodec:aac"],
             "merge_output_format": "mp4",
+            # YouTube needs a JavaScript runtime to unlock its formats.
+            "js_runtimes": {"deno": {}, "node": {}},
             "quiet": True,
             "no_warnings": True,
             # Instagram now fingerprints the TLS/HTTP handshake itself to
@@ -131,7 +147,7 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
             if has_audio(info):
                 with open(file_path, "rb") as f:
                     await context.bot.send_video(
-                        chat_id=TARGET_CHAT_ID,
+                        chat_id=TARGET_CHAT_ID or update.effective_chat.id,
                         video=f,
                         caption=caption,
                         supports_streaming=True,
@@ -139,16 +155,16 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
             else:
                 with open(file_path, "rb") as f:
                     await context.bot.send_animation(
-                        chat_id=TARGET_CHAT_ID,
+                        chat_id=TARGET_CHAT_ID or update.effective_chat.id,
                         animation=f,
                         caption=caption,
                     )
         except Exception as e:
             logger.exception("Upload failed")
-            await status_msg.edit_text(f"Failed to send to group: {e}")
+            await status_msg.edit_text(f"Failed to send: {e}")
             return
 
-    await status_msg.edit_text("Posted \u2705")
+    await status_msg.edit_text("Posted \u2705" if TARGET_CHAT_ID else "Done \u2705")
 
 
 def main():
